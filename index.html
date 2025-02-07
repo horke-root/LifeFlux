@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RimWorld Clone</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        canvas { border: 2px solid black; background-color: #f0f0f0; display: block; }
+        
+        #stats, #log { width: 200px; margin-left: 20px; }
+        #log { height: 200px; overflow-y: auto; border: 1px solid black; padding: 5px; }
+    </style>
+</head>
+<body>
+    <h1>RimWorld Clone (jQuery + Canvas)</h1>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="500" height="500"></canvas>
+        <div id="stats">
+            <h3>Персонажі</h3>
+            <table border="1">
+                <thead>
+                    <tr><th>Ім'я</th><th>X</th><th>Y</th><th>Голод</th></tr>
+                </thead>
+                <tbody id="character-stats"></tbody>
+            </table>
+            <h3>Лог подій</h3>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const TILE_SIZE = 50;
+        const WORLD_SIZE = 10;
+        const ws = new WebSocket("ws://localhost:8000/ws");
+
+        ws.onmessage = function(event) {
+            let world = JSON.parse(event.data);
+            drawWorld(world);
+            updateStats(world);
+            updateLog(world);
+        };
+
+        function drawWorld(world) {
+            let canvas = document.getElementById("gameCanvas");
+            let ctx = canvas.getContext("2d");
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = "gray";
+            for (let x = 0; x < WORLD_SIZE; x++) {
+                for (let y = 0; y < WORLD_SIZE; y++) {
+                    ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+
+            ctx.fillStyle = "green";
+            world.food.forEach(food => {
+                ctx.fillRect(food.x * TILE_SIZE + 10, food.y * TILE_SIZE + 10, 30, 30);
+            });
+
+            ctx.fillStyle = "blue";
+            world.characters.forEach(char => {
+                ctx.fillRect(char.x * TILE_SIZE + 5, char.y * TILE_SIZE + 5, 40, 40);
+            });
+        }
+
+        function updateStats(world) {
+            let statsHtml = "";
+            
+            world.characters.forEach(char => {
+                let color = "green"
+                if (!char.alive) color="red";
+                statsHtml += `<tr>
+                    <td bgcolor="${color}">${char.name}</td>
+                    <td>${char.x}</td>
+                    <td>${char.y}</td>
+                    <td>${char.hunger}</td>
+                </tr>`;
+            });
+            $("#character-stats").html(statsHtml);
+        }
+
+        function updateLog(world) {
+            let logHtml = "";
+            world.log.forEach(msg => {
+                logHtml += `<p>${msg}</p>`;
+            });
+            $("#log").html(logHtml);
+        }
+    </script>
+</body>
+</html>
